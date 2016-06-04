@@ -164,6 +164,14 @@ func_gcc_library()
 {
 	func_show_header "GCC Library"
 
+	cd ${BUILD_GCC_PATH}
+	make ${PARALLEL_N} all-target-libgcc && make install-target-libgcc
+}
+
+func_glibc_library()
+{
+	func_show_header "GLibc Library"
+
 	# looking for ${CROSS_FS_PATH}/lib/libc.so
 	# looking for ${CROSS_FS_PATH}/lib/libpthread.so
 	for file in libc.so.6 libc_nonshared.a ld-linux-aarch64.so.1 libpthread.so.0 libpthread_nonshared.a
@@ -171,23 +179,15 @@ func_gcc_library()
 		ln -sf ${CROSS_FS_PATH}/lib/${file} /lib/${file}
 	done
 
-	cd ${BUILD_GCC_PATH}
-	make ${PARALLEL_N} all-target-libgcc && make install-target-libgcc
+	cd ${BUILD_GLIBC_PATH} && \
+	make ${PARALLEL_N} user-defined-trusted-dirs="/usr/lib:/lib64:/usr/local/lib" \
+		localedir="/usr/lib/locale" i18ndir="/usr/share/i18n"
+	make install_root=${CROSS_FS_PATH} install
 	
 	for file in libc.so.6 libc_nonshared.a ld-linux-aarch64.so.1 libpthread.so.0 libpthread_nonshared.a
 	do
 		rm /lib/${file}
 	done
-}
-
-func_glibc_library()
-{
-	func_show_header "GLibc Library"
-
-	cd ${BUILD_GLIBC_PATH} && \
-	make ${PARALLEL_N} user-defined-trusted-dirs="/usr/lib:/lib64:/usr/local/lib" \
-		localedir="/usr/lib/locale" i18ndir="/usr/share/i18n"
-	make install_root=${CROSS_FS_PATH} install
 }
 
 func_gcc_plus_library()
