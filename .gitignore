@@ -1,3 +1,13 @@
 aarch64-*
 build-*
 log*
+binutils-*
+cloog-*
+gcc-linaro-*
+glibc-*
+gmp-*
+isl-*
+isl-*
+linux-*
+mpc-*
+mpfr-*
