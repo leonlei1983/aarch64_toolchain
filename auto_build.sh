@@ -2,7 +2,7 @@
 
 ROOT_PATH=$(realpath .)
 TARBALL_PATH=$(realpath ..)/tarball
-CRACK_PATH=$(realpath ..)/crack
+CRACK_PATH=${ROOT_PATH}/crack
 BUILD_MISC_PATH=${ROOT_PATH}/build-misc
 BUILD_GCC_PATH=${ROOT_PATH}/build-gcc
 BUILD_GLIBC_PATH=${ROOT_PATH}/build-glibc
@@ -139,6 +139,7 @@ func_glibc_headers()
 {
 	func_show_header "GLibc Headers"
 
+	# GLibc (Standard C Library) Headers and Startup Files
 	cd ${BUILD_GLIBC_PATH}
 	../${GLIBC_VERSION}/configure \
 		--prefix= \
@@ -172,22 +173,10 @@ func_glibc_library()
 {
 	func_show_header "GLibc Library"
 
-	# looking for ${CROSS_FS_PATH}/lib/libc.so
-	# looking for ${CROSS_FS_PATH}/lib/libpthread.so
-	for file in libc.so.6 libc_nonshared.a ld-linux-aarch64.so.1 libpthread.so.0 libpthread_nonshared.a
-	do
-		ln -sf ${CROSS_FS_PATH}/lib/${file} /lib/${file}
-	done
-
 	cd ${BUILD_GLIBC_PATH} && \
 	make ${PARALLEL_N} user-defined-trusted-dirs="/usr/lib:/lib64:/usr/local/lib" \
 		localedir="/usr/lib/locale" i18ndir="/usr/share/i18n"
 	make install_root=${CROSS_FS_PATH} install
-	
-	for file in libc.so.6 libc_nonshared.a ld-linux-aarch64.so.1 libpthread.so.0 libpthread_nonshared.a
-	do
-		rm /lib/${file}
-	done
 }
 
 func_gcc_plus_library()
@@ -197,14 +186,45 @@ func_gcc_plus_library()
 	make ${PARALLEL_N} && make install
 }
 
+func_link_unlink_library()
+{
+	local lib_list=(libc.so.6 libc_nonshared.a ld-linux-aarch64.so.1 libpthread.so.0 libpthread_nonshared.a)
+
+	# looking for ${CROSS_FS_PATH}/lib/libc.so
+	# looking for ${CROSS_FS_PATH}/lib/libpthread.so
+
+	case $1 in
+	"link")
+		for file in "${lib_list[@]}"
+		do
+			ln -sf ${CROSS_FS_PATH}/lib/${file} /lib/${file}
+		done
+		;;
+	"unlink")
+		for file in "${lib_list[@]}"
+		do
+			rm /lib/${file}
+		done
+		;;
+	esac
+}
+
 func_crack()
 {
 	# for include bits/posix2_lim.h
-	local limits_header_path=${CROSS_FS_PATH}/$(find ${CROSS_FS_PATH} -name limits.h | grep include-fixed)
-	cp ${CRACK_PATH}/limits.h ${limits_header_path}
+	local limits_header_path=$(find ${CROSS_TOOLS_PATH} -name limits.h | grep include-fixed)
+	if [ ! -z ${limits_header_path} ]; then
+		echo "overwrite file"
+		echo "  -src: ${CRACK_PATH}/limits.h"
+		echo "  -dst: ${limits_header_path}"
+		cp ${CRACK_PATH}/limits.h ${limits_header_path}
+	fi
 
 	# for ioperm
 	local io_header_path=${CROSS_FS_PATH}/include/sys/io.h
+	echo "overwrite file"
+	echo "  -src: ${CRACK_PATH}/io.h"
+	echo "  -dst: ${io_header_path}"
 	cp ${CRACK_PATH}/io.h ${io_header_path}
 	
 	echo "/LinkFS_lib" > ${CROSS_FS_PATH}/etc/ld.so.conf
@@ -216,21 +236,25 @@ main()
 	# func_extract_all_tarball
 	func_reset_built_dirs
 
+
 	###############
 	#    build    #
 	###############
+	func_link_unlink_library "link"
+
 	func_binutils
 	func_kernel_headers
+
 	func_gcc_compiler
-
-	# # 4 GLibc (Standard C Library) Headers and Startup Files
 	func_glibc_headers
-
 	func_gcc_library
 	func_glibc_library
 	func_gcc_plus_library
 
+	func_link_unlink_library "unlink"
+
 	func_crack
+
 }
 
 main
