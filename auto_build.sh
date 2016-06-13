@@ -131,6 +131,7 @@ func_gcc_compiler()
 		--enable-threads=posix \
 		--disable-libgomp \
 		--enable-checking=release \
+		--with-default-libstdcxx-abi=gcc4-compatible \
 		${CONFIGURATION_OPTIONS}
 	make ${PARALLEL_N} all-gcc && make install-gcc
 }
