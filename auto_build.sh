@@ -234,7 +234,7 @@ func_crack()
 
 main()
 {
-	# func_extract_all_tarball
+	func_extract_all_tarball
 	func_reset_built_dirs
 
 
